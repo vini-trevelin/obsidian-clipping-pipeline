@@ -123,9 +123,9 @@ def build_paths(vault_root: Path) -> VaultPaths:
     )
 
 
-def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
+def split_frontmatter(text: str) -> tuple[list[str], str]:
     if not text.startswith("---\n"):
-        return {}, text
+        return [], text
 
     lines = text.splitlines()
     end_idx = None
@@ -135,10 +135,18 @@ def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
             break
 
     if end_idx is None:
-        return {}, text
+        return [], text
 
     frontmatter_lines = lines[1:end_idx]
     body = "\n".join(lines[end_idx + 1 :]).lstrip("\n")
+    return frontmatter_lines, body
+
+
+def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
+    frontmatter_lines, body = split_frontmatter(text)
+    if not frontmatter_lines:
+        return {}, body
+
     data: dict[str, Any] = {}
     current_key: str | None = None
 
@@ -424,30 +432,12 @@ def sanitize_frontmatter(frontmatter: dict[str, Any]) -> dict[str, Any]:
     return sanitized
 
 
-def render_property_value(value: Any) -> str:
-    if isinstance(value, list):
-        if not value:
-            return "[]"
-        lines = ["- " + str(item) for item in value if str(item).strip()]
-        return "\n".join(lines)
-    if value == "":
-        return '""'
-    return str(value)
-
-
-def render_clipping_properties(frontmatter: dict[str, Any]) -> str:
-    sanitized = sanitize_frontmatter(frontmatter)
-    if not sanitized:
+def render_clipping_properties(raw_frontmatter_lines: list[str]) -> str:
+    if not raw_frontmatter_lines:
         return ""
 
     lines = ["## Properties", "", "```yaml"]
-    for key, value in sanitized.items():
-        rendered_value = render_property_value(value)
-        if isinstance(value, list) or "\n" in rendered_value:
-            lines.append(f"{key}:")
-            lines.extend(rendered_value.splitlines())
-        else:
-            lines.append(f"{key}: {rendered_value}")
+    lines.extend(raw_frontmatter_lines)
     lines.extend(["```", ""])
     return "\n".join(lines)
 
@@ -475,7 +465,7 @@ def render_summary_note(
     generated_at: datetime,
     summary_markdown: str,
     tag_links: str,
-    clipping_frontmatter: dict[str, Any],
+    raw_frontmatter_lines: list[str],
 ) -> str:
     header = apply_template_metadata(template_text, generated_at, tag_links)
     reference_marker = "\n# References"
@@ -495,8 +485,8 @@ def render_summary_note(
         f"Source: {source_url or 'N/A'}",
         f"Original clipping: [[{clip_relative_path}]]",
         "",
-        render_clipping_properties(clipping_frontmatter).rstrip(),
-        "" if clipping_frontmatter else None,
+        render_clipping_properties(raw_frontmatter_lines).rstrip(),
+        "" if raw_frontmatter_lines else None,
         summary_markdown.rstrip(),
         "",
         references_heading,
@@ -582,7 +572,7 @@ def apply_summary_payload(vault_root: Path, payload: dict[str, Any], send_email:
         for item in payload.get("items", []):
             source_path = Path(item["source_path"])
             source_text = read_text(source_path)
-            clipping_frontmatter, _source_body = parse_frontmatter(source_text)
+            raw_frontmatter_lines, _source_body = split_frontmatter(source_text)
             original_relative = source_path.relative_to(paths.clippings_dir)
             processed_relative_path = str((paths.processed_dir / original_relative).relative_to(vault_root)).replace("\\", "/")
             summary_path = build_summary_path(paths, item["summary_title"])
@@ -604,7 +594,7 @@ def apply_summary_payload(vault_root: Path, payload: dict[str, Any], send_email:
                 generated_at=generated_at,
                 summary_markdown=item["summary_markdown"],
                 tag_links=build_tag_links(inferred_tags),
-                clipping_frontmatter=clipping_frontmatter,
+                raw_frontmatter_lines=raw_frontmatter_lines,
             )
             summary_path.write_text(note_text, encoding="utf-8")
             moved_path = move_to_processed(paths, source_path)
@@ -685,7 +675,7 @@ def migrate_legacy_summaries(vault_root: Path) -> dict[str, Any]:
                 generated_at=generated_at,
                 summary_markdown=legacy["summary_markdown"],
                 tag_links=build_tag_links(inferred_tags),
-                clipping_frontmatter={},
+                raw_frontmatter_lines=[],
             )
             new_path.write_text(new_text, encoding="utf-8")
             old_relative = summary_relative_path(old_path, vault_root)

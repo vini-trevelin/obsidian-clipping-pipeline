@@ -20,6 +20,7 @@ from obsidian_clipper_pipeline import (
     parse_frontmatter,
     resolve_vault_root,
     render_clipping_properties,
+    split_frontmatter,
 )
 
 
@@ -116,8 +117,8 @@ class ObsidianClipperPipelineTests(unittest.TestCase):
             self.assertIn("Tags: [[Insights]]", summary_text)
             self.assertIn("[[Clippings/.processed/clip.md]]", summary_text)
             self.assertIn("## Properties", summary_text)
-            self.assertIn('title: Quant trading clip', summary_text)
-            self.assertIn('source: https://example.com', summary_text)
+            self.assertIn('title: "Quant trading clip"', summary_text)
+            self.assertIn('source: "https://example.com"', summary_text)
 
             daily_path = paths.daily_dir / "20260608.md"
             self.assertTrue(daily_path.exists())
@@ -156,21 +157,27 @@ class ObsidianClipperPipelineTests(unittest.TestCase):
             expected = Path(tmp_dir) / "Clippings" / "_pipeline_state" / "clipping_summary.lock.json"
             self.assertEqual(paths.lock_path, expected)
 
-    def test_render_clipping_properties_sanitizes_mojibake_lists_and_links(self) -> None:
-        frontmatter = {
-            "title": "LLM Benchmarks",
-            "author": "- [[Fabio Akita]]",
-            "description": "Esse aqui Ã© um update de rotina https://example.com com [link](https://example.com) e <b>tag</b>",
-            "tags": ["clippings", "[[AI]]"],
-            "image": "https://example.com/image.png",
-        }
-        rendered = render_clipping_properties(frontmatter)
+    def test_render_clipping_properties_preserves_raw_frontmatter_1_to_1(self) -> None:
+        clipping = (
+            "---\n"
+            'title: "LLM Benchmarks"\n'
+            'source: "https://example.com"\n'
+            "author:\n"
+            '  - "[[Fabio Akita]]"\n'
+            'description: "Esse aqui Ã© um update de rotina"\n'
+            "tags:\n"
+            '  - "clippings"\n'
+            "---\n\n"
+            "body\n"
+        )
+        raw_frontmatter_lines, _body = split_frontmatter(clipping)
+        rendered = render_clipping_properties(raw_frontmatter_lines)
         self.assertIn("## Properties", rendered)
-        self.assertIn("author:\n- Fabio Akita", rendered)
-        self.assertIn("description: Esse aqui é um update de rotina com link e tag", rendered)
-        self.assertIn("tags:\n- clippings\n- AI", rendered)
-        self.assertNotIn("image:", rendered)
-        self.assertNotIn("https://example.com", rendered)
+        self.assertIn('title: "LLM Benchmarks"', rendered)
+        self.assertIn('source: "https://example.com"', rendered)
+        self.assertIn('  - "[[Fabio Akita]]"', rendered)
+        self.assertIn('description: "Esse aqui Ã© um update de rotina"', rendered)
+        self.assertIn('  - "clippings"', rendered)
 
     def test_migrate_legacy_summaries_moves_file_and_updates_daily_link(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
