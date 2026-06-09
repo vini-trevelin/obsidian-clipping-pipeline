@@ -15,6 +15,7 @@ from obsidian_clipper_pipeline import (
     build_summary_path,
     discover_pending,
     insert_links_into_insights,
+    mark_daily_insights_habit,
     migrate_legacy_summaries,
     parse_frontmatter,
     resolve_vault_root,
@@ -49,6 +50,17 @@ class ObsidianClipperPipelineTests(unittest.TestCase):
         self.assertIn("> - [[01 - Main Notes/Insights/note.md|Note]]", updated)
         self.assertIn("> [!faq] Sonho", updated)
 
+    def test_mark_daily_insights_habit_marks_checkbox(self) -> None:
+        daily = (
+            "> [!habits]+ Habit Tracker\n"
+            "> - [ ] Acordar\n"
+            "> - [ ] Insights\n"
+            "> - [ ] Dormir\n"
+        )
+        updated = mark_daily_insights_habit(daily)
+        self.assertIn("> - [x] Insights", updated)
+        self.assertNotIn("> - [ ] Insights", updated)
+
     def test_apply_summary_payload_writes_summary_to_insights_updates_daily_and_moves_clip(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             vault_root = Path(tmp_dir)
@@ -66,7 +78,7 @@ class ObsidianClipperPipelineTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (paths.templates_dir / "{{date}}.md").write_text(
-                "## **Daily note : {{date}}**\n\n> [!NOTE] Insights\n",
+                "## **Daily note : {{date}}**\n\n> [!habits]+ Habit Tracker\n> - [ ] Acordar\n> - [ ] Insights\n\n> [!NOTE] Insights\n",
                 encoding="utf-8",
             )
 
@@ -109,7 +121,9 @@ class ObsidianClipperPipelineTests(unittest.TestCase):
 
             daily_path = paths.daily_dir / "20260608.md"
             self.assertTrue(daily_path.exists())
-            self.assertIn(f"[[01 - Main Notes/Insights/{summary_path.name}|Quant trading clip]]", daily_path.read_text(encoding="utf-8"))
+            daily_text = daily_path.read_text(encoding="utf-8")
+            self.assertIn(f"[[01 - Main Notes/Insights/{summary_path.name}|Quant trading clip]]", daily_text)
+            self.assertIn("> - [x] Insights", daily_text)
 
             processed_path = paths.processed_dir / "clip.md"
             self.assertTrue(processed_path.exists())

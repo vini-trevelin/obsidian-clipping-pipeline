@@ -11,6 +11,7 @@
 - [x] Make vault detection and repo configuration work across Windows and macOS
 - [x] Copy clipping Properties into generated Insight notes
 - [x] Sanitize copied Properties: fix common mojibake, clean clipping markup, and format list-like fields
+- [x] Mark the `Insights` habit as completed in the daily note when a new Insight is generated
 
 ## Review / Results
 
@@ -26,6 +27,7 @@
 - Adjusted lock storage to `Clippings/_pipeline_state/clipping_summary.lock.json` to avoid iCloud root write issues.
 - Verified real vault processing on 2026-06-09 for `LLM Benchmarks - Atualizando sobre Grok 4.3, MiniMax v3 e Opus 4.8`, including daily-note link insertion, move to `.processed`, and `Properties` copy into the generated Insight note.
 - Refined `Properties` rendering to preserve `source` URLs, normalize inline author/tag lists, strip typical clipping markup, and repair common UTF-8/Latin-1 mojibake patterns in copied metadata.
+- Daily note updates now also flip `> - [ ] Insights` to `> - [x] Insights` whenever at least one new Insight link is inserted for the day.
 
 # Daily Automation Run - 2026-06-09
 

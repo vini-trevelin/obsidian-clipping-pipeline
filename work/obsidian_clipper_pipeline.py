@@ -32,6 +32,8 @@ DEFAULT_LOCK_MAX_AGE_HOURS = 12
 DAILY_TEMPLATE_NAME = "{{date}}.md"
 FULL_NOTE_TEMPLATE_NAME = "Full Note.md"
 INSIGHTS_MARKER = "> [!NOTE] Insights"
+HABIT_INSIGHTS_UNCHECKED = "> - [ ] Insights"
+HABIT_INSIGHTS_CHECKED = "> - [x] Insights"
 DEFAULT_STATUS = "[[done]]"
 DEFAULT_BASE_TAG = "Insights"
 TAG_EXCLUSIONS = {"done", "insights"}
@@ -306,9 +308,15 @@ def insert_links_into_insights(daily_text: str, links: list[str]) -> str:
     return daily_text + suffix + "\n".join(appended) + "\n"
 
 
+def mark_daily_insights_habit(daily_text: str) -> str:
+    return daily_text.replace(HABIT_INSIGHTS_UNCHECKED, HABIT_INSIGHTS_CHECKED, 1)
+
+
 def update_daily_note(paths: VaultPaths, target_date: date, links: list[str]) -> Path:
     daily_path = ensure_daily_note(paths, target_date)
     updated = insert_links_into_insights(read_text(daily_path), links)
+    if links:
+        updated = mark_daily_insights_habit(updated)
     daily_path.write_text(updated, encoding="utf-8")
     return daily_path
 
