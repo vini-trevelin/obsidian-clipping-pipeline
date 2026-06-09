@@ -1,0 +1,11 @@
+{
+  "target_date": "2026-06-08",
+  "items": [
+    {
+      "source_path": "C:\\Users\\ViniciusTrevelin-Qua\\iCloudDrive\\iCloud~md~obsidian\\main\\Clippings\\FX ARBITRAGE - python.md",
+      "source_url": "https://www.linkedin.com/posts/ali-h-askar_hft-arbitrage-quanttrading-ugcPost-7333158766734901250-KN2y/?utm_source=share&utm_medium=member_ios&rcm=ACoAACvnrbQBegiCSFB3aYiBm6wsyqssMidronQ",
+      "summary_title": "FX arbitrage engine in Python",
+      "summary_markdown": "## Summary\n\n- The post claims a real-time FX arbitrage engine built primarily in Python, with C on the critical path, memory-mapped transport, lock-free ring buffers, and a design inspired by LMAX Disruptor.\n- The key pitch is that Python can still sit in a low-latency trading stack if the architecture isolates the most latency-sensitive work and keeps the data path lean.\n- The comments raise the real technical risk: even if the transport is shared-memory and lock-free, downstream transforms can still create contention, jitter, or backpressure under load.\n\n## Why this matters\n\n- It is a useful example of the difference between marketing a low-latency system and proving deterministic performance under stress.\n- For quant engineering, the interesting question is not whether Python appears in the stack, but where it sits relative to parsing, decision logic, scheduling, and execution.\n- The operational due-diligence angle is to ask for throughput, tail latency, GC behavior, and stress-test evidence rather than headline microsecond numbers.\n\n## Follow-up questions\n\n- What parts of the pipeline are implemented in Python versus C?\n- Are the quoted latency numbers median, p99, or best-case tick-to-trade measurements?\n- How does the system behave under bursty market conditions or multiple concurrent consumers of the same shared-memory feed?\n- Is there measurement for GC pauses, queue depth growth, dropped ticks, or LP-specific routing overhead?\n\n## Takeaway\n\nTreat this as a prompt for architecture review, not as evidence that Python alone solved low-latency FX arbitrage. The value is in the transport, concurrency, and measurement discipline around the stack."
+    }
+  ]
+}
