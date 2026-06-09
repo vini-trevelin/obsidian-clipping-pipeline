@@ -132,6 +132,12 @@ class ObsidianClipperPipelineTests(unittest.TestCase):
                 resolved = resolve_vault_root(None)
             self.assertEqual(resolved, root)
 
+    def test_lock_path_stays_under_clippings_state_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            paths = build_paths(Path(tmp_dir))
+            expected = Path(tmp_dir) / "Clippings" / "_pipeline_state" / "clipping_summary.lock.json"
+            self.assertEqual(paths.lock_path, expected)
+
     def test_migrate_legacy_summaries_moves_file_and_updates_daily_link(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             vault_root = Path(tmp_dir)

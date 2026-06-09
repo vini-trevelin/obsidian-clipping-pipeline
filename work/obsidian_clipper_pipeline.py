@@ -26,7 +26,8 @@ DEFAULT_DAILY_DIR = "00 - Notepad"
 DEFAULT_TEMPLATES_DIR = "04 - Templates"
 DEFAULT_INDEXES_DIR = "03 - Indexes"
 DEFAULT_PROCESSED_DIRNAME = ".processed"
-DEFAULT_LOCK_FILE = ".clipping_summary.lock"
+DEFAULT_LOCK_DIRNAME = "_pipeline_state"
+DEFAULT_LOCK_FILE = "clipping_summary.lock.json"
 DEFAULT_LOCK_MAX_AGE_HOURS = 12
 DAILY_TEMPLATE_NAME = "{{date}}.md"
 FULL_NOTE_TEMPLATE_NAME = "Full Note.md"
@@ -104,6 +105,7 @@ class VaultPaths:
 
 def build_paths(vault_root: Path) -> VaultPaths:
     clippings_dir = vault_root / DEFAULT_CLIPPINGS_DIR
+    lock_dir = clippings_dir / DEFAULT_LOCK_DIRNAME
     return VaultPaths(
         vault_root=vault_root,
         clippings_dir=clippings_dir,
@@ -114,7 +116,7 @@ def build_paths(vault_root: Path) -> VaultPaths:
         daily_dir=vault_root / DEFAULT_DAILY_DIR,
         templates_dir=vault_root / DEFAULT_TEMPLATES_DIR,
         indexes_dir=vault_root / DEFAULT_INDEXES_DIR,
-        lock_path=vault_root / DEFAULT_LOCK_FILE,
+        lock_path=lock_dir / DEFAULT_LOCK_FILE,
     )
 
 
@@ -441,6 +443,7 @@ def load_template(paths: VaultPaths) -> str:
 @contextmanager
 def processing_lock(paths: VaultPaths) -> Iterator[None]:
     now = datetime.now()
+    paths.lock_path.parent.mkdir(parents=True, exist_ok=True)
     if paths.lock_path.exists():
         try:
             payload = json.loads(read_text(paths.lock_path))
