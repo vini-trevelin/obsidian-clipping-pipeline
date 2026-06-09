@@ -7,16 +7,18 @@ Workflow:
 4. Use this section structure exactly:
    - `## Summary`
    - `## Key Points`
+   - `## Problems`
    - `## Why It Matters`
    - `## Where I Can Apply This`
    - `## Follow Up`
    - `## Related`
    - `## Takeaway`
-5. Create `work/generated_summary_payload.json` using this schema:
+5. In `## Problems`, state the important limitations, unresolved issues, tradeoffs, contradictions, or operational risks clearly and directly.
+6. Create `work/generated_summary_payload.json` using this schema:
    - `target_date`: today's date in `YYYY-MM-DD`
    - `items`: array of objects with `source_path`, `source_url`, `summary_title`, `summary_markdown`, and optionally `inferred_tags`
-6. Run `python work/obsidian_clipper_pipeline.py apply --payload "work/generated_summary_payload.json" --send-email`.
-7. Verify that:
+7. Run `python work/obsidian_clipper_pipeline.py apply --payload "work/generated_summary_payload.json" --send-email`.
+8. Verify that:
    - summary notes were written under `01 - Main Notes/Insights`
    - today's daily note under `00 - Notepad` has links added inside the `> [!NOTE] Insights` block
    - original clipping files were moved into `Clippings/.processed`

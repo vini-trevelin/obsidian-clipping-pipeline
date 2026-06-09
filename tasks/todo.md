@@ -12,6 +12,7 @@
 - [x] Copy clipping Properties into generated Insight notes
 - [x] Sanitize copied Properties: fix common mojibake, clean clipping markup, and format list-like fields
 - [x] Mark the `Insights` habit as completed in the daily note when a new Insight is generated
+- [x] Add a `Problems` section to the Insight-note summary contract
 
 ## Review / Results
 
@@ -28,6 +29,7 @@
 - Verified real vault processing on 2026-06-09 for `LLM Benchmarks - Atualizando sobre Grok 4.3, MiniMax v3 e Opus 4.8`, including daily-note link insertion, move to `.processed`, and `Properties` copy into the generated Insight note.
 - Refined `Properties` rendering to preserve `source` URLs, normalize inline author/tag lists, strip typical clipping markup, and repair common UTF-8/Latin-1 mojibake patterns in copied metadata.
 - Daily note updates now also flip `> - [ ] Insights` to `> - [x] Insights` whenever at least one new Insight link is inserted for the day.
+- Updated the local prompt and Codex automation contract to require a `## Problems` section with clear limitations, tradeoffs, unresolved issues, and operational risks.
 
 # Daily Automation Run - 2026-06-09
 
@@ -67,3 +69,24 @@
 - `fx-arbitrage-engine-in-python-2.md` exists but is zero bytes, so the daily note points to an incomplete summary.
 - A surgical repair attempt to render the FX note from `work/generated_summary_payload.json` failed because the sandbox denied writing to the iCloud vault:
   - `PermissionError: [Errno 13] Permission denied: 'C:\\Users\\ViniciusTrevelin-Qua\\iCloudDrive\\iCloud~md~obsidian\\main\\01 - Main Notes\\Insights\\fx-arbitrage-engine-in-python-2.md'`
+
+# Daily Automation Run - 2026-06-09 Built to Benefit Everyone
+
+- [x] Run clipping discovery
+- [x] Generate one English insight summary for the pending clipping
+- [x] Apply generated payload with email flag
+- [x] Verify generated note, daily note link, processed source move, and no remaining pending clippings
+- [x] Run helper unit tests
+
+## Review / Results
+
+- `python work/obsidian_clipper_pipeline.py discover` found 1 pending clipping:
+  - `Clippings/Built to benefit everyone our plan.md`
+- Created `work/generated_summary_payload.json` for `Built to benefit everyone: our plan` using the required seven-section structure.
+- `python work/obsidian_clipper_pipeline.py apply --payload "work/generated_summary_payload.json" --send-email` succeeded and returned `email_sent: false`.
+- Wrote `01 - Main Notes/Insights/built-to-benefit-everyone-our-plan.md`.
+- The generated note is non-empty, uses `Status: [[done]]`, and uses `Tags: [[Insights]] [[AI]] [[Compliance]]`.
+- Today's daily note `00 - Notepad/20260609.md` now links to `01 - Main Notes/Insights/built-to-benefit-everyone-our-plan.md` inside the `> [!NOTE] Insights` block.
+- The source clipping moved to `Clippings/.processed/Built to benefit everyone our plan.md`.
+- A final discovery pass returned `"pending": []`.
+- `python -m unittest work/test_obsidian_clipper_pipeline.py` passed: 9 tests.
