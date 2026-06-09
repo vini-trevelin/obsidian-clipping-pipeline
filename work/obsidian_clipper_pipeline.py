@@ -352,6 +352,33 @@ def build_tag_links(inferred_tags: list[str]) -> str:
     return " ".join(f"[[{tag}]]" for tag in tags)
 
 
+def render_property_value(value: Any) -> str:
+    if isinstance(value, list):
+        if not value:
+            return "[]"
+        lines = ["- " + str(item) for item in value]
+        return "\n".join(lines)
+    if value == "":
+        return '""'
+    return str(value)
+
+
+def render_clipping_properties(frontmatter: dict[str, Any]) -> str:
+    if not frontmatter:
+        return ""
+
+    lines = ["## Properties", "", "```yaml"]
+    for key, value in frontmatter.items():
+        rendered_value = render_property_value(value)
+        if "\n" in rendered_value:
+            lines.append(f"{key}:")
+            lines.extend(rendered_value.splitlines())
+        else:
+            lines.append(f"{key}: {rendered_value}")
+    lines.extend(["```", ""])
+    return "\n".join(lines)
+
+
 def apply_template_metadata(template_text: str, generated_at: datetime, tag_links: str) -> str:
     rendered = (
         template_text.replace("{{date}}", generated_at.strftime("%Y-%m-%d"))
@@ -375,6 +402,7 @@ def render_summary_note(
     generated_at: datetime,
     summary_markdown: str,
     tag_links: str,
+    clipping_frontmatter: dict[str, Any],
 ) -> str:
     header = apply_template_metadata(template_text, generated_at, tag_links)
     reference_marker = "\n# References"
@@ -394,6 +422,8 @@ def render_summary_note(
         f"Source: {source_url or 'N/A'}",
         f"Original clipping: [[{clip_relative_path}]]",
         "",
+        render_clipping_properties(clipping_frontmatter).rstrip(),
+        "" if clipping_frontmatter else None,
         summary_markdown.rstrip(),
         "",
         references_heading,
@@ -478,6 +508,8 @@ def apply_summary_payload(vault_root: Path, payload: dict[str, Any], send_email:
     with processing_lock(paths):
         for item in payload.get("items", []):
             source_path = Path(item["source_path"])
+            source_text = read_text(source_path)
+            clipping_frontmatter, _source_body = parse_frontmatter(source_text)
             original_relative = source_path.relative_to(paths.clippings_dir)
             processed_relative_path = str((paths.processed_dir / original_relative).relative_to(vault_root)).replace("\\", "/")
             summary_path = build_summary_path(paths, item["summary_title"])
@@ -499,6 +531,7 @@ def apply_summary_payload(vault_root: Path, payload: dict[str, Any], send_email:
                 generated_at=generated_at,
                 summary_markdown=item["summary_markdown"],
                 tag_links=build_tag_links(inferred_tags),
+                clipping_frontmatter=clipping_frontmatter,
             )
             summary_path.write_text(note_text, encoding="utf-8")
             moved_path = move_to_processed(paths, source_path)
@@ -579,6 +612,7 @@ def migrate_legacy_summaries(vault_root: Path) -> dict[str, Any]:
                 generated_at=generated_at,
                 summary_markdown=legacy["summary_markdown"],
                 tag_links=build_tag_links(inferred_tags),
+                clipping_frontmatter={},
             )
             new_path.write_text(new_text, encoding="utf-8")
             old_relative = summary_relative_path(old_path, vault_root)

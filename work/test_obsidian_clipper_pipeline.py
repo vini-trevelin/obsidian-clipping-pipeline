@@ -102,6 +102,9 @@ class ObsidianClipperPipelineTests(unittest.TestCase):
             self.assertIn("Status: [[done]]", summary_text)
             self.assertIn("Tags: [[Insights]]", summary_text)
             self.assertIn("[[Clippings/.processed/clip.md]]", summary_text)
+            self.assertIn("## Properties", summary_text)
+            self.assertIn('title: Quant trading clip', summary_text)
+            self.assertIn('source: https://example.com', summary_text)
 
             daily_path = paths.daily_dir / "20260608.md"
             self.assertTrue(daily_path.exists())
