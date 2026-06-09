@@ -18,6 +18,7 @@ from obsidian_clipper_pipeline import (
     migrate_legacy_summaries,
     parse_frontmatter,
     resolve_vault_root,
+    render_clipping_properties,
 )
 
 
@@ -140,6 +141,22 @@ class ObsidianClipperPipelineTests(unittest.TestCase):
             paths = build_paths(Path(tmp_dir))
             expected = Path(tmp_dir) / "Clippings" / "_pipeline_state" / "clipping_summary.lock.json"
             self.assertEqual(paths.lock_path, expected)
+
+    def test_render_clipping_properties_sanitizes_mojibake_lists_and_links(self) -> None:
+        frontmatter = {
+            "title": "LLM Benchmarks",
+            "author": "- [[Fabio Akita]]",
+            "description": "Esse aqui Ã© um update de rotina https://example.com com [link](https://example.com) e <b>tag</b>",
+            "tags": ["clippings", "[[AI]]"],
+            "image": "https://example.com/image.png",
+        }
+        rendered = render_clipping_properties(frontmatter)
+        self.assertIn("## Properties", rendered)
+        self.assertIn("author:\n- Fabio Akita", rendered)
+        self.assertIn("description: Esse aqui é um update de rotina com link e tag", rendered)
+        self.assertIn("tags:\n- clippings\n- AI", rendered)
+        self.assertNotIn("image:", rendered)
+        self.assertNotIn("https://example.com", rendered)
 
     def test_migrate_legacy_summaries_moves_file_and_updates_daily_link(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

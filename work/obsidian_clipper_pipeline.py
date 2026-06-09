@@ -35,6 +35,7 @@ INSIGHTS_MARKER = "> [!NOTE] Insights"
 DEFAULT_STATUS = "[[done]]"
 DEFAULT_BASE_TAG = "Insights"
 TAG_EXCLUSIONS = {"done", "insights"}
+PROPERTY_DROP_KEYS = {"image", "favicon", "icon"}
 
 
 def candidate_vault_roots() -> list[Path]:
@@ -352,11 +353,74 @@ def build_tag_links(inferred_tags: list[str]) -> str:
     return " ".join(f"[[{tag}]]" for tag in tags)
 
 
+def maybe_fix_mojibake(value: str) -> str:
+    markers = ("Ã", "â", "ð", "Î", "Â", "�")
+    if not any(marker in value for marker in markers):
+        return value
+    try:
+        repaired = value.encode("latin-1", errors="ignore").decode("utf-8", errors="ignore")
+        if repaired:
+            return repaired
+    except Exception:
+        return value
+    return value
+
+
+def strip_property_markup(value: str, *, keep_urls: bool = False) -> str:
+    cleaned = maybe_fix_mojibake(value)
+    cleaned = re.sub(r"\[\[([^|\]]+)\|([^\]]+)\]\]", r"\2", cleaned)
+    cleaned = re.sub(r"\[\[([^\]]+)\]\]", r"\1", cleaned)
+    cleaned = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1", cleaned)
+    cleaned = re.sub(r"<[^>]+>", " ", cleaned)
+    if not keep_urls:
+        cleaned = re.sub(r"https?://\S+", "", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned
+
+
+def normalize_property_value(key: str, value: Any) -> Any:
+    keep_urls = key.lower() == "source"
+    if isinstance(value, list):
+        normalized_list = []
+        for item in value:
+            cleaned_item = strip_property_markup(str(item), keep_urls=keep_urls)
+            if cleaned_item:
+                normalized_list.append(cleaned_item)
+        return normalized_list
+
+    if not isinstance(value, str):
+        return value
+
+    candidate = maybe_fix_mojibake(value).strip()
+    if candidate.startswith("- "):
+        items = [strip_property_markup(part[2:].strip(), keep_urls=keep_urls) for part in candidate.splitlines() if part.strip().startswith("- ")]
+        return [item for item in items if item]
+
+    if re.fullmatch(r"\[\]", candidate):
+        return []
+
+    cleaned_text = strip_property_markup(candidate, keep_urls=keep_urls)
+    return cleaned_text
+
+
+def sanitize_frontmatter(frontmatter: dict[str, Any]) -> dict[str, Any]:
+    sanitized: dict[str, Any] = {}
+    for key, value in frontmatter.items():
+        normalized_key = key.strip()
+        if normalized_key.lower() in PROPERTY_DROP_KEYS:
+            continue
+        normalized_value = normalize_property_value(normalized_key, value)
+        if normalized_value in ("", [], None):
+            continue
+        sanitized[normalized_key] = normalized_value
+    return sanitized
+
+
 def render_property_value(value: Any) -> str:
     if isinstance(value, list):
         if not value:
             return "[]"
-        lines = ["- " + str(item) for item in value]
+        lines = ["- " + str(item) for item in value if str(item).strip()]
         return "\n".join(lines)
     if value == "":
         return '""'
@@ -364,13 +428,14 @@ def render_property_value(value: Any) -> str:
 
 
 def render_clipping_properties(frontmatter: dict[str, Any]) -> str:
-    if not frontmatter:
+    sanitized = sanitize_frontmatter(frontmatter)
+    if not sanitized:
         return ""
 
     lines = ["## Properties", "", "```yaml"]
-    for key, value in frontmatter.items():
+    for key, value in sanitized.items():
         rendered_value = render_property_value(value)
-        if "\n" in rendered_value:
+        if isinstance(value, list) or "\n" in rendered_value:
             lines.append(f"{key}:")
             lines.extend(rendered_value.splitlines())
         else:
