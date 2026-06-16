@@ -12,12 +12,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from obsidian_clipper_pipeline import (
     apply_summary_payload,
     build_paths,
-    build_summary_path,
     discover_pending,
     insert_links_into_insights,
     mark_daily_insights_habit,
     migrate_legacy_summaries,
     parse_frontmatter,
+    reorganize_insight_notes,
     resolve_vault_root,
     render_clipping_properties,
     split_frontmatter,
@@ -107,11 +107,14 @@ class ObsidianClipperPipelineTests(unittest.TestCase):
 
             result = apply_summary_payload(vault_root, payload, send_email=False)
 
-            summary_path = build_summary_path(paths, "Quant trading clip")
             summary_candidates = list(paths.insights_dir.glob("quant-trading-clip*.md"))
+            if not summary_candidates:
+                summary_candidates = list(paths.insights_dir.rglob("quant-trading-clip*.md"))
             self.assertEqual(len(summary_candidates), 1)
             summary_path = summary_candidates[0]
             self.assertTrue(summary_path.exists())
+            self.assertEqual(summary_path.parent.name, "2026-06-08")
+            self.assertEqual(summary_path.parent.parent.name, "2026")
             summary_text = summary_path.read_text(encoding="utf-8")
             self.assertIn("Status: [[done]]", summary_text)
             self.assertIn("Tags: [[Insights]]", summary_text)
@@ -123,7 +126,10 @@ class ObsidianClipperPipelineTests(unittest.TestCase):
             daily_path = paths.daily_dir / "20260608.md"
             self.assertTrue(daily_path.exists())
             daily_text = daily_path.read_text(encoding="utf-8")
-            self.assertIn(f"[[01 - Main Notes/Insights/{summary_path.name}|Quant trading clip]]", daily_text)
+            self.assertIn(
+                f"[[01 - Main Notes/Insights/2026/2026-06-08/{summary_path.name}|Quant trading clip]]",
+                daily_text,
+            )
             self.assertIn("> - [x] Insights", daily_text)
 
             processed_path = paths.processed_dir / "clip.md"
@@ -213,7 +219,49 @@ class ObsidianClipperPipelineTests(unittest.TestCase):
             migrated_path = Path(result["migrated"][0]["new_path"])
             self.assertTrue(migrated_path.exists())
             self.assertFalse(old_summary.exists())
-            self.assertIn(f"[[01 - Main Notes/Insights/{migrated_path.name}|FX note]]", daily.read_text(encoding="utf-8"))
+            self.assertEqual(migrated_path.parent.name, "2026-06-08")
+            self.assertEqual(migrated_path.parent.parent.name, "2026")
+            self.assertIn(
+                f"[[01 - Main Notes/Insights/2026/2026-06-08/{migrated_path.name}|FX note]]",
+                daily.read_text(encoding="utf-8"),
+            )
+
+    def test_reorganize_insight_notes_moves_flat_notes_into_dated_folders_and_repairs_links(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            vault_root = Path(tmp_dir)
+            paths = build_paths(vault_root)
+            paths.insights_dir.mkdir(parents=True)
+            paths.daily_dir.mkdir(parents=True)
+
+            flat_note = paths.insights_dir / "sample-note.md"
+            flat_note.write_text(
+                "2026-06-11 17:07\n\n"
+                "Status: [[done]]\n\n"
+                "Tags: [[Insights]] [[AI]]\n\n"
+                "---\n\n"
+                "# Sample Note\n\n"
+                "Source: https://example.com\n",
+                encoding="utf-8",
+            )
+            daily = paths.daily_dir / "20260611.md"
+            daily.write_text(
+                "> [!NOTE] Insights\n"
+                "> - [[01 - Main Notes/Insights/sample-note.md|Sample Note]]\n",
+                encoding="utf-8",
+            )
+
+            result = reorganize_insight_notes(vault_root)
+
+            self.assertEqual(len(result["moved"]), 1)
+            new_path = Path(result["moved"][0]["new_path"])
+            self.assertTrue(new_path.exists())
+            self.assertFalse(flat_note.exists())
+            self.assertEqual(new_path.parent.name, "2026-06-11")
+            self.assertEqual(new_path.parent.parent.name, "2026")
+            self.assertIn(
+                f"[[01 - Main Notes/Insights/2026/2026-06-11/{new_path.name}|Sample Note]]",
+                daily.read_text(encoding="utf-8"),
+            )
 
 
 if __name__ == "__main__":

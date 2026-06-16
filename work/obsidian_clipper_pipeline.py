@@ -38,6 +38,7 @@ DEFAULT_STATUS = "[[done]]"
 DEFAULT_BASE_TAG = "Insights"
 TAG_EXCLUSIONS = {"done", "insights"}
 PROPERTY_DROP_KEYS = {"image", "favicon", "icon"}
+DATE_LINE_PATTERN = re.compile(r"^(?P<day>\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?$")
 
 
 def candidate_vault_roots() -> list[Path]:
@@ -186,6 +187,16 @@ def slugify(value: str) -> str:
     return slug or "summary"
 
 
+def parse_iso_date(value: str) -> date | None:
+    match = re.search(r"(\d{4}-\d{2}-\d{2})", value or "")
+    if not match:
+        return None
+    try:
+        return date.fromisoformat(match.group(1))
+    except ValueError:
+        return None
+
+
 def normalize_for_match(value: str) -> str:
     ascii_value = value.encode("ascii", errors="ignore").decode("ascii").lower()
     return re.sub(r"[^a-z0-9]+", " ", ascii_value).strip()
@@ -261,10 +272,16 @@ def ensure_unique_path(candidate: Path) -> Path:
         counter += 1
 
 
-def build_summary_path(paths: VaultPaths, title: str) -> Path:
-    paths.insights_dir.mkdir(parents=True, exist_ok=True)
+def summarize_note_date(target_date: date) -> tuple[str, str]:
+    return target_date.strftime("%Y"), target_date.isoformat()
+
+
+def build_summary_path(paths: VaultPaths, title: str, target_date: date) -> Path:
+    year_dir, day_dir = summarize_note_date(target_date)
+    dated_dir = paths.insights_dir / year_dir / day_dir
+    dated_dir.mkdir(parents=True, exist_ok=True)
     filename = f"{slugify(title)}.md"
-    return ensure_unique_path(paths.insights_dir / filename)
+    return ensure_unique_path(dated_dir / filename)
 
 
 def ensure_daily_note(paths: VaultPaths, target_date: date) -> Path:
@@ -341,6 +358,56 @@ def update_daily_links(paths: VaultPaths, old_relative_path: str, new_relative_p
         daily_path.write_text(updated, encoding="utf-8")
         replacements += 1
     return replacements
+
+
+def extract_note_date_from_text(text: str) -> date | None:
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("created:") or stripped.startswith("published:"):
+            parsed = parse_iso_date(stripped)
+            if parsed:
+                return parsed
+        if DATE_LINE_PATTERN.fullmatch(stripped):
+            parsed = parse_iso_date(stripped)
+            if parsed:
+                return parsed
+    return None
+
+
+def extract_note_title_from_text(text: str) -> str | None:
+    for line in text.splitlines():
+        if line.startswith("# "):
+            return line[2:].strip()
+    return None
+
+
+def parse_frontmatter_date(frontmatter: dict[str, Any], *keys: str) -> date | None:
+    for key in keys:
+        value = frontmatter.get(key)
+        if isinstance(value, str):
+            parsed = parse_iso_date(value)
+            if parsed:
+                return parsed
+    return None
+
+
+def derive_summary_date(frontmatter: dict[str, Any], target_date: date, fallback_timestamp: datetime | None = None) -> date:
+    return (
+        parse_frontmatter_date(frontmatter, "created", "published")
+        or target_date
+        or (fallback_timestamp.date() if fallback_timestamp else None)
+        or date.today()
+    )
+
+
+def derive_existing_insight_date(note_path: Path) -> date:
+    text = read_text(note_path)
+    extracted = extract_note_date_from_text(text)
+    if extracted:
+        return extracted
+    return datetime.fromtimestamp(note_path.stat().st_mtime).date()
 
 
 def load_index_names(paths: VaultPaths) -> list[str]:
@@ -495,12 +562,25 @@ def render_summary_note(
     return "\n".join(section for section in sections if section is not None).rstrip() + "\n"
 
 
+def move_file_verified(source_path: Path, destination_path: Path) -> Path:
+    destination_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(source_path), str(destination_path))
+    if destination_path.exists() and not source_path.exists():
+        return destination_path
+
+    if source_path.exists():
+        destination_path.write_bytes(source_path.read_bytes())
+        source_path.unlink()
+
+    if not destination_path.exists():
+        raise RuntimeError(f"Failed to move {source_path} to {destination_path}.")
+    return destination_path
+
+
 def move_to_processed(paths: VaultPaths, source_path: Path) -> Path:
     relative = source_path.relative_to(paths.clippings_dir)
     destination = paths.processed_dir / relative
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(str(source_path), str(destination))
-    return destination
+    return move_file_verified(source_path, destination)
 
 
 def maybe_send_email(subject: str, body: str) -> bool:
@@ -573,9 +653,11 @@ def apply_summary_payload(vault_root: Path, payload: dict[str, Any], send_email:
             source_path = Path(item["source_path"])
             source_text = read_text(source_path)
             raw_frontmatter_lines, _source_body = split_frontmatter(source_text)
+            source_frontmatter, _ = parse_frontmatter(source_text)
             original_relative = source_path.relative_to(paths.clippings_dir)
             processed_relative_path = str((paths.processed_dir / original_relative).relative_to(vault_root)).replace("\\", "/")
-            summary_path = build_summary_path(paths, item["summary_title"])
+            summary_date = derive_summary_date(source_frontmatter, target_date)
+            summary_path = build_summary_path(paths, item["summary_title"], summary_date)
             inferred_tags = item.get("inferred_tags") or infer_tags(
                 paths,
                 " ".join(
@@ -666,7 +748,8 @@ def migrate_legacy_summaries(vault_root: Path) -> dict[str, Any]:
         for old_path in legacy_summary_paths(paths):
             legacy = parse_legacy_summary(read_text(old_path))
             inferred_tags = infer_tags(paths, f"{legacy['title']} {legacy['summary_markdown']} {legacy['source_url']}")
-            new_path = build_summary_path(paths, legacy["title"])
+            summary_date = derive_existing_insight_date(old_path)
+            new_path = build_summary_path(paths, legacy["title"], summary_date)
             new_text = render_summary_note(
                 template_text=template_text,
                 summary_title=legacy["title"],
@@ -695,6 +778,52 @@ def migrate_legacy_summaries(vault_root: Path) -> dict[str, Any]:
     return {"migrated": migrated}
 
 
+def legacy_insight_note_paths(paths: VaultPaths) -> list[Path]:
+    if not paths.insights_dir.exists():
+        return []
+    legacy_paths: list[Path] = []
+    for note_path in sorted(paths.insights_dir.rglob("*.md")):
+        if note_path.parent == paths.insights_dir:
+            legacy_paths.append(note_path)
+    return legacy_paths
+
+
+def reorganize_insight_notes(vault_root: Path) -> dict[str, Any]:
+    paths = build_paths(vault_root)
+    moved: list[dict[str, Any]] = []
+
+    with processing_lock(paths):
+        for old_path in legacy_insight_note_paths(paths):
+            note_text = read_text(old_path)
+            note_date = derive_existing_insight_date(old_path)
+            note_title = extract_note_title_from_text(note_text) or old_path.stem
+            year_dir, day_dir = summarize_note_date(note_date)
+            target_dir = paths.insights_dir / year_dir / day_dir
+            target_dir.mkdir(parents=True, exist_ok=True)
+            candidate = target_dir / old_path.name
+            if candidate.exists():
+                if candidate.resolve() == old_path.resolve():
+                    continue
+                candidate = ensure_unique_path(candidate)
+
+            new_path = candidate
+            move_file_verified(old_path, new_path)
+
+            old_relative = summary_relative_path(old_path, vault_root)
+            new_relative = summary_relative_path(new_path, vault_root)
+            replacements = update_daily_links(paths, old_relative, new_relative, note_title)
+            moved.append(
+                {
+                    "old_path": str(old_path),
+                    "new_path": str(new_path),
+                    "daily_links_updated": replacements,
+                    "date_folder": f"{year_dir}/{day_dir}",
+                }
+            )
+
+    return {"moved": moved}
+
+
 def emit_json(data: dict[str, Any]) -> None:
     payload = json.dumps(data, ensure_ascii=False, indent=2)
     sys.stdout.buffer.write(payload.encode("utf-8"))
@@ -721,6 +850,12 @@ def cmd_migrate(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_reorganize(args: argparse.Namespace) -> int:
+    result = reorganize_insight_notes(Path(args.vault_root))
+    emit_json(result)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Deterministic helpers for Obsidian clipping summaries.")
     parser.add_argument("--vault-root", default=None)
@@ -736,6 +871,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     migrate_parser = subparsers.add_parser("migrate", help="Move legacy summaries into the new Insights pattern.")
     migrate_parser.set_defaults(func=cmd_migrate)
+
+    reorganize_parser = subparsers.add_parser("reorganize", help="Move Insight notes into the dated Insights layout.")
+    reorganize_parser.set_defaults(func=cmd_reorganize)
 
     return parser
 

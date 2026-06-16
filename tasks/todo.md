@@ -90,3 +90,172 @@
 - The source clipping moved to `Clippings/.processed/Built to benefit everyone our plan.md`.
 - A final discovery pass returned `"pending": []`.
 - `python -m unittest work/test_obsidian_clipper_pipeline.py` passed: 9 tests.
+
+# Daily Automation Run - 2026-06-09 Claude Fable 5
+
+- [x] Check automation memory and repo operating instructions
+- [x] Run clipping discovery
+- [x] Generate one English insight summary for the pending clipping
+- [x] Apply generated payload with email flag
+- [x] Verify generated note, daily note link, processed source move, and no remaining pending clippings
+- [x] Run helper unit tests
+
+## Review / Results
+
+- `python work/obsidian_clipper_pipeline.py discover` found 1 pending clipping:
+  - `Clippings/Claude Fable 5 and Claude Mythos 5.md`
+- Created `work/generated_summary_payload.json` for `Claude Fable 5 and Claude Mythos 5` with the required section structure, preserved source links, benchmark image, and video references.
+- `python work/obsidian_clipper_pipeline.py apply --payload "work/generated_summary_payload.json" --send-email` succeeded and returned `email_sent: false`.
+- Wrote `01 - Main Notes/Insights/claude-fable-5-and-claude-mythos-5.md`.
+- The generated note is non-empty, uses `Status: [[done]]`, and uses `Tags: [[Insights]] [[AI]] [[Research]]`.
+- Today's daily note `00 - Notepad/20260609.md` links to `01 - Main Notes/Insights/claude-fable-5-and-claude-mythos-5.md` inside the `> [!NOTE] Insights` block and has the `Insights` habit marked complete.
+- The source clipping moved to `Clippings/.processed/Claude Fable 5 and Claude Mythos 5.md`.
+- A final discovery pass returned `"pending": []`.
+- `python -m unittest work/test_obsidian_clipper_pipeline.py` passed: 9 tests.
+
+# Daily Automation Run - 2026-06-09 No Pending Clippings
+
+- [x] Check automation memory and repo operating instructions
+- [x] Run clipping discovery
+- [x] Verify no top-level pending clipping markdown files remain
+- [x] Verify current daily-note Insight links and recent generated notes
+- [x] Run helper unit tests
+
+## Review / Results
+
+- No prior automation memory file existed for this automation run; a new memory record was created after verification.
+- `python work/obsidian_clipper_pipeline.py discover` returned `"pending": []`.
+- `Clippings/` has no top-level pending markdown files; recent source clippings are under `Clippings/.processed`.
+- No new payload was generated and no apply step was run because there were no pending clippings to process.
+- Today's daily note `00 - Notepad/20260609.md` has the `> [!NOTE] Insights` block populated and the `Insights` habit marked complete.
+- Verified recent notes under `01 - Main Notes/Insights` are non-empty and use `Status: [[done]]`, `Tags: [[Insights]]` plus inferred tags, and the required summary sections:
+  - `built-to-benefit-everyone-our-plan.md`
+  - `zero-knowledge-verification-for-frontier-ai-training-is-possible.md`
+  - `fx-arbitrage-engine-in-python-2.md`
+- `python -m unittest work/test_obsidian_clipper_pipeline.py` passed: 9 tests.
+
+# Manual PDF Clipping - 2026-06-10 NY Quantitative Conference
+
+- [x] Inspect repo instructions, summary contract, and existing Insight-note pattern
+- [x] Extract readable text from the local PDF
+- [x] Create a PDF-derived source clipping under `Clippings/`
+- [x] Generate and apply one Insight summary payload
+- [x] Verify generated note, daily-note link, processed source move, and helper tests
+
+## Review / Results
+
+- Extracted readable text from the 73-page local PDF into `work/2026_ny_quant_conference_extract.txt`.
+- Created a detailed per-topic source clipping for the PDF and applied it through the deterministic helper.
+- Wrote `01 - Main Notes/Insights/2026-ny-quantitative-conference-quant-process-ai-adoption-and-investor-survey.md`.
+- The generated note is non-empty, uses `Status: [[done]]`, and uses `Tags: [[Insights]] [[Quant]] [[AI]]`.
+- The note includes topic-level detail for the investor survey, quant research discipline, replication crisis, AI-augmented research, signal design, systematic fixed income, intelligent alpha, quantum, agentic workflows, evals, GPU infrastructure, defense lessons, and sovereign AI.
+- Today's daily note `00 - Notepad/20260610.md` links to the generated note inside the `> [!NOTE] Insights` block and has the `Insights` habit marked complete.
+- The PDF-derived source clipping moved to `Clippings/.processed/2026 NY Quantitative Conference Summary of Presentations and Investor Survey.md`.
+- A final discovery pass shows only the unrelated `Clippings/PufferLib Docs.md` remains pending.
+- `python -m unittest work/test_obsidian_clipper_pipeline.py` passed: 9 tests.
+
+# Daily Automation Run - 2026-06-10 PufferLib Docs
+
+- [x] Check automation memory and repo operating instructions
+- [x] Run clipping discovery
+- [x] Generate one English insight summary for the pending clipping
+- [x] Apply generated payload with email flag
+- [x] Verify generated note, daily note link, processed source move, and no remaining pending clippings
+- [x] Run helper unit tests
+
+## Review / Results
+
+- `python work/obsidian_clipper_pipeline.py discover` found 1 pending clipping:
+  - `Clippings/PufferLib Docs.md`
+- Created `work/generated_summary_payload.json` for `PufferLib Docs` with the required section structure and preserved useful links to the docs, Discord, PufferTank, Dockerfile, install script, and Ocean templates.
+- Omitted explicit `inferred_tags` so the deterministic helper inferred tags from `03 - Indexes`.
+- `python work/obsidian_clipper_pipeline.py apply --payload "work/generated_summary_payload.json" --send-email` succeeded and returned `email_sent: false`.
+- Wrote `01 - Main Notes/Insights/pufferlib-docs.md`.
+- The generated note is non-empty, uses `Status: [[done]]`, and uses `Tags: [[Insights]] [[Research]] [[AI]]`.
+- Today's daily note `00 - Notepad/20260610.md` links to `01 - Main Notes/Insights/pufferlib-docs.md` inside the `> [!NOTE] Insights` block and has the `Insights` habit marked complete.
+- The source clipping moved to `Clippings/.processed/PufferLib Docs.md`.
+- A final discovery pass returned `"pending": []`.
+- `python -m unittest work/test_obsidian_clipper_pipeline.py` passed: 9 tests.
+
+# Daily Automation Run - 2026-06-10 No Pending Clippings
+
+- [x] Check automation memory, runbook, and repo operating instructions
+- [x] Run clipping discovery
+- [x] Verify no top-level pending clipping markdown files remain
+- [x] Verify today's daily-note Insight links and recent generated notes
+- [x] Run helper unit tests
+
+## Review / Results
+
+- `python work/obsidian_clipper_pipeline.py discover` returned `"pending": []`.
+- `Clippings/` has no top-level pending markdown files, so no payload was generated and no apply step was run.
+- Today's daily note `00 - Notepad/20260610.md` has the `> [!NOTE] Insights` block populated with links to `pufferlib-docs.md` and the NY Quantitative Conference note, and the `Insights` habit is marked complete.
+- Recent notes under `01 - Main Notes/Insights` are non-empty and use `Status: [[done]]`, `Tags: [[Insights]]` plus inferred tags, and the required summary sections.
+- Recent source clippings are under `Clippings/.processed`.
+- A final discovery pass returned `"pending": []`.
+- `python -m unittest work/test_obsidian_clipper_pipeline.py` passed: 9 tests.
+
+# Daily Automation Run - 2026-06-12 No Pending Clippings
+
+- [x] Check automation memory, runbook, and repo operating instructions
+- [x] Run clipping discovery
+- [x] Verify no top-level pending clipping markdown files remain
+- [x] Verify today's daily note state and recent generated Insight notes
+- [x] Run helper unit tests
+
+## Review / Results
+
+- `python work/obsidian_clipper_pipeline.py discover` returned `"pending": []`.
+- `Clippings/` has no top-level pending markdown files, so no payload was generated and no apply step was run.
+- Today's daily note `00 - Notepad/20260612.md` exists with an empty `> [!NOTE] Insights` block and the `Insights` habit remains unchecked because no new Insight was created.
+- Recent notes under `01 - Main Notes/Insights` are non-empty and use `Status: [[done]]`, `Tags: [[Insights]]` plus up to two inferred tags, and the required summary sections.
+- `python -m unittest work/test_obsidian_clipper_pipeline.py` passed: 9 tests.
+
+# Daily Automation Run - 2026-06-13 No Pending Clippings
+
+- [x] Check automation memory, runbook, and repo operating instructions
+- [x] Run clipping discovery
+- [x] Verify no top-level pending clipping markdown files remain
+- [x] Verify current daily-note state and recent generated Insight notes
+- [x] Run helper unit tests
+
+## Review / Results
+
+- `python work/obsidian_clipper_pipeline.py discover` returned `"pending": []`.
+- `Clippings/` has no top-level pending markdown files, so no payload was generated and no apply step was run.
+- Today's daily note `00 - Notepad/20260613.md` does not exist; because no new Insight was created, the run did not create or edit the daily note.
+- Recent notes under `01 - Main Notes/Insights` are non-empty and use `Status: [[done]]`, `Tags: [[Insights]]` plus up to two inferred tags, and the required summary sections.
+- A final discovery pass returned `"pending": []`.
+- `python -m unittest work/test_obsidian_clipper_pipeline.py` passed: 9 tests.
+
+# Insights Reorganization - 2026-06-16
+
+- [x] Inspect current repo instructions, pipeline behavior, and existing Insight-note structure
+- [x] Align on the target organization rule for `01 - Main Notes/Insights`
+- [x] Update the pipeline so new Insight notes are created in the standardized dated layout
+- [x] Migrate existing Insight notes into the new dated layout and repair daily-note links
+- [x] Verify migrated note locations, link integrity, and helper tests
+
+## Proposed layout
+
+- Store notes under `01 - Main Notes/Insights/YYYY/YYYY-MM-DD/<slug>.md`
+- Derive the folder date from `Properties.created`, falling back to `published`, then the note timestamp, then file modified time
+- Keep note filenames slug-based and unchanged except when collisions require the existing `-2`, `-3`, ... suffix behavior
+- Continue linking daily notes directly to the note path, updating links automatically during migration
+
+## Review / Results
+
+- Standardized new Insight note output to `01 - Main Notes/Insights/YYYY/YYYY-MM-DD/<slug>.md`.
+- Added `python work/obsidian_clipper_pipeline.py reorganize` to migrate existing flat Insight notes into the same dated layout.
+- The reorganization rule uses note date evidence in this order:
+  - `created`
+  - `published`
+  - top timestamp line like `2026-06-10 14:09`
+  - file modified time
+- Migrated 12 existing flat Insight notes into dated folders and preserved the three notes that were already under dated folders from `2026-06-15`.
+- Repaired daily-note links for the migrated notes; spot-checks on `00 - Notepad/20260609.md`, `20260610.md`, and `20260611.md` now point into the dated layout.
+- Unit verification passed after the code change and after the real vault migration:
+  - `python -m unittest work/test_obsidian_clipper_pipeline.py`
+- Found and fixed an iCloud-specific move problem:
+  - plain `shutil.move` reported success but did not materialize the dated target file reliably
+  - replaced it with a verified move that falls back to copy-then-delete when rename semantics are unreliable

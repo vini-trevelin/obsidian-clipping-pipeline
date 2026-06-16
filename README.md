@@ -6,6 +6,7 @@ Local pipeline for processing Obsidian Web Clipper notes into cleaned insight no
 
 - reads pending notes from `Clippings/`
 - generates cleaned summary notes under `01 - Main Notes/Insights/`
+- stores Insight notes under `01 - Main Notes/Insights/YYYY/YYYY-MM-DD/`
 - writes `Status: [[done]]`
 - writes `Tags: [[Insights]]` plus up to 2 inferred tags from `03 - Indexes/`
 - adds links to the current daily note `Insights` block
@@ -38,6 +39,12 @@ Migrate legacy summaries from the old storage layout:
 
 ```bash
 python work/obsidian_clipper_pipeline.py migrate
+```
+
+Reorganize existing flat Insight notes into the dated layout:
+
+```bash
+python work/obsidian_clipper_pipeline.py reorganize
 ```
 
 Run tests:
